@@ -10,7 +10,7 @@ namespace ShowCase
             Name = name;
             Registration = reg;
         }
-        public string Name { get; set;}
+        public string Name { get; set; }
         public string Registration { get; set; }
     }
     class Program
@@ -32,7 +32,7 @@ namespace ShowCase
 
             string[] words = { "Alphabet", "Zebra", "ABC", "Αθήνα", "Москва" };
 
-            var file = await words.ConvertToExcelAsync("test.xls", "C:\\Users\\Giftm\\Downloads");
+            var file = words.ConvertToExcel("test", "C:\\Users\\Giftm\\Downloads");
 
             Console.WriteLine($"The List has been written to: {file}");
         }

@@ -14,41 +14,43 @@ namespace ObjectToExcelUnitTests
 
         public class Student
         {
+            [ExportToExcel(1)]
             public string Name { get; set; }
             public string Level { get; set; }
+            [ExportToExcel(2)]
             public int Year { get; set; }
             public double FinalMark { get; set; }
         }
         [TestMethod]
-        public async System.Threading.Tasks.Task TestPrimativeTypeList()
+        public void TestPrimativeTypeList()
         {
             string[] words = { "Alphabet", "Zebra", "ABC", "Αθήνα", "Москва" };
 
-            var file = await words.ConvertToExcelAsync("TestPrimativeTypeList.xls", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            var file = words.ConvertToExcel("TestPrimativeTypeList.xlsx", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
             Assert.IsTrue(System.IO.File.Exists(file));
         }
         [TestMethod]
-        public async System.Threading.Tasks.Task TestPrimativeTypeListWithNulls()
+        public void TestPrimativeTypeListWithNulls()
         {
             string?[] words = { "Alphabet", null, "Zebra", null, "ABC", "Αθήνα", "Москва" };
 
-            var file = await words.ConvertToExcelAsync("TestPrimativeTypeListWithNulls.xls", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            var file = words.ConvertToExcel("TestPrimativeTypeListWithNulls.xlsx", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 
             Assert.IsTrue(System.IO.File.Exists(file));
         }
         [TestMethod]
-        public async System.Threading.Tasks.Task TestObjectListWithNulls()
+        public void TestObjectListWithNulls()
         {
             Student[] students = {
                 new Student() { Name="Gift"},
                 null,
                 new Student() { Name="Hlobile", Level="Grade 7", Year=2, FinalMark=80.00},
                 null,
-                new Student(){ FinalMark=3.0  },
+                new Student(){ Name="Mkhosi",FinalMark=3.0  },
                 null
            };
 
-            var file = await students.ConvertToExcelAsync("TestObjectListWithNulls.xls", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            var file = students.ConvertToExcel("TestObjectListWithNulls.xlsx", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 
             Assert.IsTrue(System.IO.File.Exists(file));
         }

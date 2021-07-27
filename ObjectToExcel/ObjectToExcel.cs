@@ -32,13 +32,14 @@ namespace ObjectToExcel
         //
         // Remarks:
         //     This is only public and still present to preserve compatibility with the V1 framework.
-        public static async Task<string> ConvertToExcelAsync<T>(this IEnumerable<T> items, string fileName, string savePath, string sheetName = "Items", string fill = "null")
+        public static string ConvertToExcel<T>(this IEnumerable<T> items, string fileName, string savePath, string sheetName = "Items", string fill = "null")
         {
             //remvoe nulls from items
             items = items.Where(i => i != null).ToList();
 
             var isSimpleType = IsSimpleType(items.FirstOrDefault().GetType());
             int headerCount = 1;
+            File.Delete(fileName);
             if (!Directory.Exists(savePath))
             {
                 Directory.CreateDirectory(savePath);
@@ -49,7 +50,7 @@ namespace ObjectToExcel
             System.IO.File.Delete(filePath);
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using (ExcelPackage package = new ExcelPackage(new FileInfo(filePath)))
+            using (ExcelPackage package = new ExcelPackage())
             {
                 ExcelWorksheet workSheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name == sheetName);
                 if (workSheet == null)
@@ -63,12 +64,17 @@ namespace ObjectToExcel
                 if (!isSimpleType)
                 {
                     var headers = typeof(T).GetProperties().Select(f => f.Name).ToList();
-                    headerCount = headers.Count;
+                    headerCount = 0;
                     // create headers 
                     foreach (var header in headers)
                     {
-                        workSheet.Cells[row, column].Value = header;
-                        column++;
+                        // add header when exported attribute exists
+                        if (IsExported<T>(items.FirstOrDefault(), header))
+                        {
+                            workSheet.Cells[row, column].Value = header;
+                            headerCount++;
+                            column++;
+                        }
                     }
                 }
                 // Go To next row
@@ -87,17 +93,21 @@ namespace ObjectToExcel
                             {
                                 foreach (PropertyInfo prop in item.GetType().GetProperties())
                                 {
-                                    try
+                                    if (IsExported<T>(items.FirstOrDefault(), prop.Name))
                                     {
-                                        var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-                                        workSheet.Cells[row, column].Value = prop.GetValue(item, null).ToString();
+                                        try
+                                        {
+                                            var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                                            ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
+                                            workSheet.Cells[row, column].Value = prop.GetValue(item, null).ToString();
+                                            column++;
 
+                                        }
+                                        catch
+                                        {
+                                            workSheet.Cells[row, column].Value = fill;
+                                        }
                                     }
-                                    catch
-                                    {
-                                        workSheet.Cells[row, column].Value = fill;
-                                    }
-                                    column++;
                                 }
                             }
                             break;
@@ -115,11 +125,18 @@ namespace ObjectToExcel
                 //Formating the table style
 
                 tab.TableStyle = TableStyles.Light14;
-                // save excel file
-                await package.SaveAsync();
 
+                FileInfo fi = new FileInfo(filePath);
+                // save excel file
+                package.SaveAs(fi);
                 return filePath;
             }
+        }
+        public static bool IsExported<T>(T item, string property)
+        {
+            var t = typeof(T);
+            var pi = t.GetProperty(property);
+            return Attribute.IsDefined(pi, typeof(ExportToExcel));
         }
         public static bool IsSimpleType(Type type)
         {
