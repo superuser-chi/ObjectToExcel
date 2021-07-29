@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using ObjectToExcel;
 using OfficeOpenXml;
@@ -9,6 +10,10 @@ namespace ShowCase
 {
     class Car
     {
+        public Car()
+        {
+        }
+
         public Car(string name, string reg)
         {
             Name = name;
@@ -41,10 +46,11 @@ namespace ShowCase
                 Directory.CreateDirectory(folder);
             }
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using (ExcelPackage package = new ExcelPackage())
+            FileInfo fi = new FileInfo($"{folder}/cars.xlsx");
+            string sheetName = "cars";
+            using (ExcelPackage package = new ExcelPackage(fi))
             {
-                cars.ConvertToExcel(package, true);
-                FileInfo fi = new FileInfo($"{folder}/cars.xlsx");
+                cars.ConvertToExcel(package, true, sheetName);
                 // words.ConvertToExcel(package);
                 // FileInfo fi = new FileInfo($"{folder}/words.xlsx");
                 package.SaveAs(fi);
@@ -52,6 +58,20 @@ namespace ShowCase
             }
 
             Console.WriteLine($"The List has been written");
+            List<Car> newCars = new List<Car>();
+            using (ExcelPackage package = new ExcelPackage(fi))
+            {
+
+                newCars = newCars.LoadFromExcel(package, sheetName).ToList();
+                // words.ConvertToExcel(package);
+                // FileInfo fi = new FileInfo($"{folder}/words.xlsx");
+                // package.SaveAs(fi);
+
+            }
+            foreach (var car in newCars)
+            {
+                Console.WriteLine($"{car.Name}, {car.Registration}");
+            }
         }
     }
 }
