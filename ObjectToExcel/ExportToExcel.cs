@@ -15,7 +15,7 @@ namespace ObjectToExcel
 
         public virtual int order
         {
-            get { return this.order; }
+            get { return this.Order; }
         }
         public virtual bool wrap
         {

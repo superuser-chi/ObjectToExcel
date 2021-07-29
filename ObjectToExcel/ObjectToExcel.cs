@@ -32,7 +32,7 @@ namespace ObjectToExcel
         //
         // Remarks:
         //     This is only public and still present to preserve compatibility with the V1 framework.
-        public static ExcelPackage ConvertToExcel<T>(this IEnumerable<T> items, ExcelPackage package, string sheetName = "Items", string fill = "null")
+        public static ExcelPackage ConvertToExcel<T>(this IEnumerable<T> items, ExcelPackage package, bool printAll = true, string sheetName = "Items", string fill = "null")
         {
             //remvoe nulls from items
             items = items.Where(i => i != null).ToList();
@@ -52,19 +52,29 @@ namespace ObjectToExcel
 
             if (!isSimpleType)
             {
-                var headers = typeof(T).GetProperties().Select(f => f.Name).ToList();
                 headerCount = 0;
+                int order = 0;
                 // create headers 
-                foreach (var header in headers)
+                List<Column> columns = new List<Column>();
+                foreach (PropertyInfo prop in typeof(T).GetProperties())
                 {
                     // add header when exported attribute exists
-                    if (IsExported<T>(items.FirstOrDefault(), header))
+                    if (printAll || IsExported<T>(items.FirstOrDefault(), prop.Name))
                     {
-                        workSheet.Cells[row, column].Value = header;
+                        ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
+                        columns.Add(new Column
+                        {
+                            Order = exporttribute == null ? order : exporttribute.order,
+                            Name = prop.Name,
+                            Value = prop.Name
+                        });
                         headerCount++;
-                        column++;
+                        order++;
                     }
                 }
+                columns.Sort((x, y) => x.Order.CompareTo(y.Order));
+                workSheet.Cells[row, column].LoadFromText(String.Join(",", columns.Select(x => x.Value).ToList()));
+
             }
             // Go To next row
             row++;
@@ -80,24 +90,39 @@ namespace ObjectToExcel
                     default:
                         if (item != null)
                         {
+
+                            int order = 1;
+                            List<Column> columns = new List<Column>();
                             foreach (PropertyInfo prop in item.GetType().GetProperties())
                             {
-                                if (IsExported<T>(items.FirstOrDefault(), prop.Name))
+                                if (printAll || IsExported<T>(items.FirstOrDefault(), prop.Name))
                                 {
+                                    ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
                                     try
                                     {
-                                        var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-                                        ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
-                                        workSheet.Cells[row, column].Value = prop.GetValue(item, null).ToString();
-                                        column++;
-
+                                        columns.Add(new Column
+                                        {
+                                            Order = exporttribute == null ? order : exporttribute.order,
+                                            Name = prop.Name,
+                                            Value = prop.GetValue(item, null).ToString()
+                                        });
+                                        order++;
+                                        // workSheet.Cells[row, column].Value = prop.GetValue(item, null).ToString();
                                     }
                                     catch
                                     {
                                         workSheet.Cells[row, column].Value = fill;
+                                        columns.Add(new Column
+                                        {
+                                            Order = exporttribute == null ? order : exporttribute.order,
+                                            Name = prop.Name,
+                                            Value = fill
+                                        });
                                     }
                                 }
                             }
+                            columns.Sort((x, y) => x.Order.CompareTo(y.Order));
+                            workSheet.Cells[row, column].LoadFromText(String.Join(",", columns.Select(x => x.Value).ToList()));
                         }
                         break;
                 }
@@ -117,6 +142,10 @@ namespace ObjectToExcel
             // save excel file
             return package;
 
+        }
+        private static int GetOrder(ExportToExcel exportExcel, int order)
+        {
+            return exportExcel == null ? order : exportExcel.order;
         }
         public static bool IsExported<T>(T item, string property)
         {

@@ -18,8 +18,9 @@ namespace ObjectToExcelUnitTests
             [ExportToExcel(1)]
             public string Name { get; set; }
             public string Level { get; set; }
-            [ExportToExcel(2)]
+            [ExportToExcel(3)]
             public int Year { get; set; }
+            [ExportToExcel(2)]
             public double FinalMark { get; set; }
         }
         [TestMethod]
@@ -53,7 +54,7 @@ namespace ObjectToExcelUnitTests
             using (ExcelPackage package = new ExcelPackage())
             {
                 words.ConvertToExcel(package);
-                FileInfo fi = new FileInfo($"{folder}/TestPrimativeTypeListWithNulls.xlsx.xlsx");
+                FileInfo fi = new FileInfo($"{folder}/TestPrimativeTypeListWithNulls.xlsx");
                 package.SaveAs(fi);
                 Assert.IsTrue(fi.Exists);
             }
@@ -77,8 +78,34 @@ namespace ObjectToExcelUnitTests
             }
             using (ExcelPackage package = new ExcelPackage())
             {
+                students.ConvertToExcel(package, false);
+                FileInfo fi = new FileInfo($"{folder}/TestObjectListWithNulls.xlsx");
+                package.SaveAs(fi);
+                Assert.IsTrue(fi.Exists);
+            }
+
+        }
+        [TestMethod]
+        public void TestObjectListWithNullsAll()
+        {
+            Student[] students = {
+                new Student() { Name="Gift"},
+                null,
+                new Student() { Name="Hlobile", Level="Grade 7", Year=2, FinalMark=80.00},
+                null,
+                new Student(){ Name="Mkhosi",FinalMark=3.0  },
+                null
+           };
+
+            string folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            using (ExcelPackage package = new ExcelPackage())
+            {
                 students.ConvertToExcel(package);
-                FileInfo fi = new FileInfo($"{folder}/TestObjectListWithNulls.xlsx.xlsx");
+                FileInfo fi = new FileInfo($"{folder}/TestObjectListWithNullsAll.xlsx");
                 package.SaveAs(fi);
                 Assert.IsTrue(fi.Exists);
             }
