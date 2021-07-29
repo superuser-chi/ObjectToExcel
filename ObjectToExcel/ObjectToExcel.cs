@@ -32,105 +32,91 @@ namespace ObjectToExcel
         //
         // Remarks:
         //     This is only public and still present to preserve compatibility with the V1 framework.
-        public static string ConvertToExcel<T>(this IEnumerable<T> items, string fileName, string savePath, string sheetName = "Items", string fill = "null")
+        public static ExcelPackage ConvertToExcel<T>(this IEnumerable<T> items, ExcelPackage package, string sheetName = "Items", string fill = "null")
         {
             //remvoe nulls from items
             items = items.Where(i => i != null).ToList();
 
             var isSimpleType = IsSimpleType(items.FirstOrDefault().GetType());
             int headerCount = 1;
-            File.Delete(fileName);
-            if (!Directory.Exists(savePath))
-            {
-                Directory.CreateDirectory(savePath);
-            }
-            var filePath = Path.Combine(savePath, fileName);
-
-            // delete file if it exists
-            System.IO.File.Delete(filePath);
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using (ExcelPackage package = new ExcelPackage())
+            ExcelWorksheet workSheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name == sheetName);
+            if (workSheet == null)
             {
-                ExcelWorksheet workSheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name == sheetName);
-                if (workSheet == null)
-                {
-                    package.Workbook.Worksheets.Add(sheetName);
-                }
-                workSheet = package.Workbook.Worksheets[sheetName];
-                int row = 1;
-                int column = 1;
+                package.Workbook.Worksheets.Add(sheetName);
+            }
+            workSheet = package.Workbook.Worksheets[sheetName];
+            int row = 1;
+            int column = 1;
 
-                if (!isSimpleType)
+            if (!isSimpleType)
+            {
+                var headers = typeof(T).GetProperties().Select(f => f.Name).ToList();
+                headerCount = 0;
+                // create headers 
+                foreach (var header in headers)
                 {
-                    var headers = typeof(T).GetProperties().Select(f => f.Name).ToList();
-                    headerCount = 0;
-                    // create headers 
-                    foreach (var header in headers)
+                    // add header when exported attribute exists
+                    if (IsExported<T>(items.FirstOrDefault(), header))
                     {
-                        // add header when exported attribute exists
-                        if (IsExported<T>(items.FirstOrDefault(), header))
-                        {
-                            workSheet.Cells[row, column].Value = header;
-                            headerCount++;
-                            column++;
-                        }
+                        workSheet.Cells[row, column].Value = header;
+                        headerCount++;
+                        column++;
                     }
                 }
-                // Go To next row
-                row++;
-                // populate data
-                foreach (var item in items)
+            }
+            // Go To next row
+            row++;
+            // populate data
+            foreach (var item in items)
+            {
+                column = 1;
+                switch (isSimpleType)
                 {
-                    column = 1;
-                    switch (isSimpleType)
-                    {
-                        case true:
-                            workSheet.Cells[row, column].Value = item;
-                            break;
-                        default:
-                            if (item != null)
+                    case true:
+                        workSheet.Cells[row, column].Value = item;
+                        break;
+                    default:
+                        if (item != null)
+                        {
+                            foreach (PropertyInfo prop in item.GetType().GetProperties())
                             {
-                                foreach (PropertyInfo prop in item.GetType().GetProperties())
+                                if (IsExported<T>(items.FirstOrDefault(), prop.Name))
                                 {
-                                    if (IsExported<T>(items.FirstOrDefault(), prop.Name))
+                                    try
                                     {
-                                        try
-                                        {
-                                            var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
-                                            ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
-                                            workSheet.Cells[row, column].Value = prop.GetValue(item, null).ToString();
-                                            column++;
+                                        var type = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                                        ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
+                                        workSheet.Cells[row, column].Value = prop.GetValue(item, null).ToString();
+                                        column++;
 
-                                        }
-                                        catch
-                                        {
-                                            workSheet.Cells[row, column].Value = fill;
-                                        }
+                                    }
+                                    catch
+                                    {
+                                        workSheet.Cells[row, column].Value = fill;
                                     }
                                 }
                             }
-                            break;
-                    }
-                    row++;
+                        }
+                        break;
                 }
-
-                //Defining the tables parameters
-                ExcelRange rg = workSheet.Cells[1, 1, items.Count() + 1, headerCount];
-                string tableName = isSimpleType ? "items" : typeof(T).Name.ToString();
-
-                //Ading a table to a Range
-                ExcelTable tab = workSheet.Tables.Add(rg, tableName);
-
-                //Formating the table style
-
-                tab.TableStyle = TableStyles.Light14;
-
-                FileInfo fi = new FileInfo(filePath);
-                // save excel file
-                package.SaveAs(fi);
-                return filePath;
+                row++;
             }
+
+            //Defining the tables parameters
+            ExcelRange rg = workSheet.Cells[1, 1, items.Count() + 1, headerCount];
+            string tableName = isSimpleType ? "items" : typeof(T).Name.ToString();
+
+            //Ading a table to a Range
+            ExcelTable tab = workSheet.Tables.Add(rg, tableName);
+
+            //Formating the table style
+
+            tab.TableStyle = TableStyles.Light14;
+            // save excel file
+            return package;
+
         }
         public static bool IsExported<T>(T item, string property)
         {

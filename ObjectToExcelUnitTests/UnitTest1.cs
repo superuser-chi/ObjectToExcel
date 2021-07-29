@@ -5,6 +5,7 @@ using ObjectToExcel;
 using ShowCase;
 using System.IO;
 using System.Reflection;
+using OfficeOpenXml;
 
 namespace ObjectToExcelUnitTests
 {
@@ -26,17 +27,36 @@ namespace ObjectToExcelUnitTests
         {
             string[] words = { "Alphabet", "Zebra", "ABC", "Αθήνα", "Москва" };
 
-            var file = words.ConvertToExcel("TestPrimativeTypeList.xlsx", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-            Assert.IsTrue(System.IO.File.Exists(file));
+            string folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            using (ExcelPackage package = new ExcelPackage())
+            {
+                words.ConvertToExcel(package);
+                FileInfo fi = new FileInfo($"{folder}/TestPrimativeTypeList.xlsx");
+                package.SaveAs(fi);
+                Assert.IsTrue(fi.Exists);
+            }
         }
         [TestMethod]
         public void TestPrimativeTypeListWithNulls()
         {
             string?[] words = { "Alphabet", null, "Zebra", null, "ABC", "Αθήνα", "Москва" };
 
-            var file = words.ConvertToExcel("TestPrimativeTypeListWithNulls.xlsx", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-
-            Assert.IsTrue(System.IO.File.Exists(file));
+            string folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            using (ExcelPackage package = new ExcelPackage())
+            {
+                words.ConvertToExcel(package);
+                FileInfo fi = new FileInfo($"{folder}/TestPrimativeTypeListWithNulls.xlsx.xlsx");
+                package.SaveAs(fi);
+                Assert.IsTrue(fi.Exists);
+            }
         }
         [TestMethod]
         public void TestObjectListWithNulls()
@@ -50,9 +70,19 @@ namespace ObjectToExcelUnitTests
                 null
            };
 
-            var file = students.ConvertToExcel("TestObjectListWithNulls.xlsx", Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            string folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            if (!Directory.Exists(folder))
+            {
+                Directory.CreateDirectory(folder);
+            }
+            using (ExcelPackage package = new ExcelPackage())
+            {
+                students.ConvertToExcel(package);
+                FileInfo fi = new FileInfo($"{folder}/TestObjectListWithNulls.xlsx.xlsx");
+                package.SaveAs(fi);
+                Assert.IsTrue(fi.Exists);
+            }
 
-            Assert.IsTrue(System.IO.File.Exists(file));
         }
     }
 }
