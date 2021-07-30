@@ -143,6 +143,27 @@ namespace ObjectToExcel
             return package;
 
         }
+        //
+        // Summary:
+        //    Loads an excel file into a  list.
+        //
+        // Parameters:
+        //   collection:
+        //     The collection in which the data is to be loaded into.
+        //   package:
+        //     The EPPLUS package to be used in reading in the data.
+        //   savePath:
+        //     The path  where the excel file is to be saved.
+        //   sheetName:
+        //     The name of the sheet where the items is to be saved, default is items.
+        //   readAll:
+        //     A boolean that describes if all columns of the object are to be read in.
+        //
+        // Returns:
+        //     The file path where the excel file was saved.
+        //
+        // Remarks:
+        //     This is only public and still present to preserve compatibility with the V1 framework.
         public static IEnumerable<T> LoadFromExcel<T>(this IEnumerable<T> collection, ExcelPackage package, string sheetName, bool readAll = true)
         {
             return IsSimpleType(typeof(T))
