@@ -12,7 +12,7 @@
 
 1.  Navigate to the bin/debug folder and run the following command:
 
-    `dotnet nuget push superuser-chi.helpers.object-to-excel.<VERSION_NUMBER>.nupkg --api-key <API_KEY> --source https://api.nuget.org/v3/index.json`
+    `dotnet nuget push bin/Debug/<NUGET_PACKAGE> --api-key <API_KEY> --source https://api.nuget.org/v3/index.json`
 
 ## INSTALLATION
 

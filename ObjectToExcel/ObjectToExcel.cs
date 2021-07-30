@@ -238,14 +238,49 @@ namespace ObjectToExcel
                                     col.Property.SetValue(tnew, null);
                                     return;
                                 }
-                                if (col.Property.PropertyType == typeof(Int32))
+                                if (col.Property.PropertyType == typeof(short))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<short>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(ushort))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<ushort>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(int))
                                 {
                                     col.Property.SetValue(tnew, val.GetValue<int>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(uint))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<uint>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(bool))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<bool>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(long))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<long>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(ulong))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<ulong>());
                                     return;
                                 }
                                 if (col.Property.PropertyType == typeof(double))
                                 {
                                     col.Property.SetValue(tnew, val.GetValue<double>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(decimal))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<decimal>());
                                     return;
                                 }
                                 if (col.Property.PropertyType == typeof(DateTime))
