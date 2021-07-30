@@ -28,14 +28,12 @@ namespace ShowCase
         static void Main(string[] args)
         {
             List<Car> cars = new List<Car>();
+            cars.Add(new Car("GOLF 6 R", "HH101SD"));
+            cars.Add(null);
             cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
-            cars.Add(new Car("GOLF 7 R", "HH101SD"));
+            cars.Add(new Car("GOLF 8 R", "HH102SD"));
+            cars.Add(null);
+            cars.Add(new Car("GOLF Tiguan", "HH105SD"));
 
 
             string[] words = { "Alphabet", "Zebra", "ABC", "Αθήνα", "Москва" };
@@ -46,7 +44,9 @@ namespace ShowCase
                 Directory.CreateDirectory(folder);
             }
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            FileInfo fi = new FileInfo($"{folder}/cars.xlsx");
+            string filePath = $"{folder}/cars.xlsx";
+            System.IO.File.Delete(filePath);
+            FileInfo fi = new FileInfo(filePath);
             string sheetName = "cars";
             using (ExcelPackage package = new ExcelPackage(fi))
             {
@@ -59,6 +59,8 @@ namespace ShowCase
 
             Console.WriteLine($"The List has been written");
             List<Car> newCars = new List<Car>();
+            IEnumerable<string> newWords = new string[] { };
+
             using (ExcelPackage package = new ExcelPackage(fi))
             {
 
@@ -68,10 +70,12 @@ namespace ShowCase
                 // package.SaveAs(fi);
 
             }
-            foreach (var car in newCars)
-            {
-                Console.WriteLine($"{car.Name}, {car.Registration}");
-            }
+            cars = cars.Where(o => o != null).ToList();
+            // var un = newCars.Except(cars).Union(newCars.Except(cars)).Any();
+            var firstNotSecond = newCars.Except(cars).ToList();
+            var secondNotFirst = cars.Except(newCars).ToList();
+            Console.WriteLine(!firstNotSecond.Any() && !secondNotFirst.Any());
+
         }
     }
 }

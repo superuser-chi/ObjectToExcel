@@ -32,7 +32,7 @@ namespace ObjectToExcel
         //
         // Remarks:
         //     This is only public and still present to preserve compatibility with the V1 framework.
-        public static ExcelPackage ConvertToExcel<T>(this IEnumerable<T> items, ExcelPackage package, bool printAll = true, string sheetName = "Items", string fill = "null")
+        public static ExcelPackage ConvertToExcel<T>(this IEnumerable<T> items, ExcelPackage package, bool printAll = true, string sheetName = "Items", string fill = null)
         {
             //remvoe nulls from items
             items = items.Where(i => i != null).ToList();
@@ -64,7 +64,7 @@ namespace ObjectToExcel
                         ExportToExcel exporttribute = prop.GetCustomAttributes(typeof(ExportToExcel), true).Cast<ExportToExcel>().FirstOrDefault();
                         columns.Add(new Column
                         {
-                            Order = exporttribute == null ? order : exporttribute.order,
+                            Order = GetOrder(exporttribute, printAll, order),
                             Name = prop.Name,
                             Value = prop.Name
                         });
@@ -102,7 +102,7 @@ namespace ObjectToExcel
                                     {
                                         columns.Add(new Column
                                         {
-                                            Order = exporttribute == null ? order : exporttribute.order,
+                                            Order = GetOrder(exporttribute, printAll, order),
                                             Name = prop.Name,
                                             Value = prop.GetValue(item, null).ToString()
                                         });
@@ -143,30 +143,47 @@ namespace ObjectToExcel
             return package;
 
         }
+        public static IEnumerable<T> LoadFromExcel<T>(this IEnumerable<T> collection, ExcelPackage package, string sheetName, bool readAll = true)
+        {
+            return IsSimpleType(typeof(T))
+                ? collection.LoadPrimitiveFromExcel(package, sheetName, readAll)
+                : collection.LoadObjectsFromExcel(package, sheetName, readAll);
 
-        public static IEnumerable<T> LoadFromExcel<T>(this IEnumerable<T> collection, ExcelPackage package, string sheetName, bool readAll = true) where T : new()
+        }
+        public static IEnumerable<T> LoadPrimitiveFromExcel<T>(this IEnumerable<T> collection, ExcelPackage package, string sheetName, bool readAll = true)
+        {
+            ExcelWorksheet worksheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name == sheetName);
+
+            var rows = worksheet.Cells
+                .Select(cell => cell.Start.Row)
+                .Distinct()
+                .OrderBy(x => x);
+
+            if (IsSimpleType(typeof(T)))
+            {
+                collection = rows.Skip(1)
+                .Select(row =>
+                {
+                    var val = worksheet.Cells[row, 1];
+                    T tnew = val.GetValue<T>();
+                    return tnew;
+                });
+            }
+            return collection;
+        }
+
+        public static IEnumerable<T> LoadObjectsFromExcel<T>(this IEnumerable<T> collection, ExcelPackage package, string sheetName, bool readAll = true)
         {
 
             Func<CustomAttributeData, bool> columnOnly = y => y.AttributeType == typeof(ExportToExcel);
 
-
-            // var props = typeof(T)
-            //         .GetProperties()
-            //         .Where(x => readAll || x.CustomAttributes.Any(columnOnly))
-            //         .ToList();
-            // var columns = props.Select((p, order) => new
-            // {
-            //     Property = p,
-            //     Column = GetOrder(p.GetCustomAttributes<ExportToExcel>().First(), order),  //safe because if where above
-            // })
-            // .ToList();
             var columns = typeof(T)
                 .GetProperties()
                 .Where(x => readAll || x.CustomAttributes.Any(columnOnly))
             .Select((p, order) => new
             {
                 Property = p,
-                Column = GetOrder(p.GetCustomAttributes<ExportToExcel>().FirstOrDefault(), order + 1)//safe because if where above
+                Column = GetOrder(p.GetCustomAttributes<ExportToExcel>().FirstOrDefault(), readAll, order + 1)//safe because if where above
             }).ToList();
 
             ExcelWorksheet worksheet = package.Workbook.Worksheets.FirstOrDefault(x => x.Name == sheetName);
@@ -176,51 +193,69 @@ namespace ObjectToExcel
                 .Distinct()
                 .OrderBy(x => x);
 
-
             //Create the collection container
             collection = rows.Skip(1)
-                .Select(row =>
-                {
-                    var tnew = new T();
-                    columns.ForEach(col =>
+                    .Select(row =>
                     {
-                        //This is the real wrinkle to using reflection - Excel stores all numbers as double including int
-                        var val = worksheet.Cells[row, col.Column];
-                        //If it is numeric it is a double since that is how excel stores all numbers
-                        if (val.Value == null)
-                        {
-                            col.Property.SetValue(tnew, null);
-                            return;
-                        }
-                        if (col.Property.PropertyType == typeof(Int32))
-                        {
-                            col.Property.SetValue(tnew, val.GetValue<int>());
-                            return;
-                        }
-                        if (col.Property.PropertyType == typeof(double))
-                        {
-                            col.Property.SetValue(tnew, val.GetValue<double>());
-                            return;
-                        }
-                        if (col.Property.PropertyType == typeof(DateTime))
-                        {
-                            col.Property.SetValue(tnew, val.GetValue<DateTime>());
-                            return;
-                        }
-                        //Its a string
-                        col.Property.SetValue(tnew, val.GetValue<string>());
-                    });
+                        T tnew = (T)Activator.CreateInstance(typeof(T));
+                        columns.ForEach(col =>
+                            {
+                                //This is the real wrinkle to using reflection - Excel stores all numbers as double including int
+                                var location = worksheet.GetHeaderColumns().FirstOrDefault(i => i.Value == col.Property.Name);
+                                if (location.Key == 0)
+                                {
+                                    col.Property.SetValue(tnew, null);
+                                    return;
+                                }
+                                // Console.WriteLine($"col.Property.Name: {col.Property.Name}");
+                                // Console.WriteLine($"column: {location.Key}");
+                                var val = worksheet.Cells[row, location.Key];
+                                // col.Property.Name ==
+                                //If it is numeric it is a double since that is how excel stores all numbers
+                                if (val.Value == null)
+                                {
+                                    col.Property.SetValue(tnew, null);
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(Int32))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<int>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(double))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<double>());
+                                    return;
+                                }
+                                if (col.Property.PropertyType == typeof(DateTime))
+                                {
+                                    col.Property.SetValue(tnew, val.GetValue<DateTime>());
+                                    return;
+                                }
+                                //Its a string
+                                col.Property.SetValue(tnew, val.GetValue<string>());
+                            });
 
-                    return tnew;
-                });
+                        return tnew;
+                    });
 
 
             //Send it back
             return collection;
         }
 
-        private static int GetOrder(ExportToExcel exportExcel, int order)
+        public static Dictionary<int, string> GetHeaderColumns(this ExcelWorksheet sheet)
         {
+            var columnNames = new Dictionary<int, string>();
+            foreach (var firstRowCell in sheet.Cells[sheet.Dimension.Start.Row, sheet.Dimension.Start.Column, 1, sheet.Dimension.End.Column])
+            {
+                columnNames.Add(firstRowCell.Start.Column, firstRowCell.Text);
+            }
+            return columnNames;
+        }
+        private static int GetOrder(ExportToExcel exportExcel, bool all, int order)
+        {
+            if (all) return order;
             return exportExcel == null ? order : exportExcel.order;
         }
         public static bool IsExported<T>(T item, string property)
