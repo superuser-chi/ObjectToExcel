@@ -4,6 +4,10 @@
 
 This is a simple library that can be used to convert a list to excel and read in data from an excel file.
 
+## Installation
+
+    `dotnet add package superuser-chi.helpers.object-to-excel --version <VERSION_NUMBER>`
+
 ## Examples
 
 See the following program for examples
